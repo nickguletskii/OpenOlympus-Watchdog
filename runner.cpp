@@ -431,10 +431,10 @@ namespace openolympus {
 						memoryLimit = std::stoll(optarg);
 						break;
 					case 'c':
-						cpuLimit = std::stoll(optarg);
+						cpuLimit = 1000000ll * std::stoll(optarg);
 						break;
 					case 't':
-						timeLimit = 1000000ll * std::stoll(optarg);
+						timeLimit = std::stoll(optarg);
 						break;
 					case 'd':
 						diskLimit = std::stoll(optarg);

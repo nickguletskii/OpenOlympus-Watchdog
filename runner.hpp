@@ -96,14 +96,22 @@ namespace openolympus {
 	private:
 		pid_t pid = 0;
 	public:
-		watchdog(size_t memory_limit, size_t disk_limit, int64_t time_limit, int64_t cpu_time_limit, uid_t gid, uid_t uid, std::string chroot_path)
-				: memory_limit(memory_limit), disk_limit(disk_limit), time_limit(time_limit),
-				  cpu_time_limit(cpu_time_limit), chroot_path(chroot_path), gid(gid), uid(uid) {
+		watchdog(bool enableSecurity, size_t memory_limit, size_t disk_limit, int64_t time_limit, int64_t cpu_time_limit, uid_t gid, uid_t uid, std::string chroot_path)
+				: enableSecurity(enableSecurity),
+				  memory_limit(memory_limit),
+				  disk_limit(disk_limit),
+				  time_limit(time_limit),
+				  cpu_time_limit(cpu_time_limit),
+				  chroot_path(chroot_path),
+				  gid(gid),
+				  uid(uid) {
 		}
 
 		void fork_app(std::string program, std::vector<std::string> args);
 
 	private:
+		bool enableSecurity;
+
 		size_t memory_limit;
 		size_t disk_limit;
 		int64_t time_limit;

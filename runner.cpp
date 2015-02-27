@@ -195,7 +195,8 @@ namespace openolympus {
 			FAIL_CHILD;
 		}
 
-		install_syscall_filter();
+		if(enableSecurity)
+			install_syscall_filter();
 		LOG("Running execve: " << program);
 		// No cleanup required: we exit here anyway!
 		execve(program.c_str(), argv.data(), envp.data());
@@ -469,7 +470,7 @@ namespace openolympus {
 			args.push_back(std::string(argv[index]));
 		}
 
-		watchdog watcher(memoryLimit, diskLimit, timeLimit, cpuLimit, gid, uid, jailPath);
+		watchdog watcher(enableSecurity, memoryLimit, diskLimit, timeLimit, cpuLimit, gid, uid, jailPath);
 		watcher.fork_app(std::string(argv[optind]), args);
 	}
 }

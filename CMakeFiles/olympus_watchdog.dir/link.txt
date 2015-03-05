@@ -1,1 +1,0 @@
-/usr/bin/c++    -std=c++11    CMakeFiles/olympus_watchdog.dir/runner.cpp.o  -o olympus_watchdog -rdynamic -lpthread 

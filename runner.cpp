@@ -39,7 +39,6 @@
 #include <sys/resource.h>
 #include <algorithm>
 #include <fstream>
-#include <getopt.h>
 #include <map>
 
 
@@ -188,14 +187,16 @@ namespace openolympus {
 			FAIL_CHILD;
 		}
 
-		if (setgid(gid) != 0) {ERR_LOG("Couldn't change gid! Error: " << strerror(errno));
+		if (setgid(gid) != 0) {
+			ERR_LOG("Couldn't change gid! Error: " << strerror(errno));
 			FAIL_CHILD;
 		}
-		if (setuid(uid) != 0) {ERR_LOG("Couldn't change uid! Error: " << strerror(errno));
+		if (setuid(uid) != 0) {
+			ERR_LOG("Couldn't change uid! Error: " << strerror(errno));
 			FAIL_CHILD;
 		}
 
-		if(enableSecurity)
+		if (enableSecurity)
 			install_syscall_filter();
 		LOG("Running execve: " << program);
 		// No cleanup required: we exit here anyway!
@@ -271,7 +272,7 @@ namespace openolympus {
 
 			struct timespec ts;
 			if (clock_getcpuclockid(pid, &clock_id) == 0 && clock_gettime(clock_id, &ts) == 0) {
-				cpu_milliseconds_consumed = ((int64_t) ts.tv_sec) * 1000000ll + ((int64_t) ts.tv_nsec / 1000ll);
+				cpu_milliseconds_consumed = ((int64_t) ts.tv_sec) * 1000ll + ((int64_t) ts.tv_nsec / 1000000ll);
 			}
 
 
@@ -387,7 +388,7 @@ namespace openolympus {
 
 	void run(int argc, char **argv) {
 		int64_t memoryLimit = 64ll * 1024ll * 1024ll;
-		int64_t cpuLimit = 1ll * 1000000000ll;
+		int64_t cpuLimit = 1ll * 1000ll;
 		int64_t timeLimit = 2ll * 1000ll;
 		int64_t diskLimit = 1ll * 1024ll * 1024ll;
 
@@ -432,7 +433,7 @@ namespace openolympus {
 						memoryLimit = std::stoll(optarg);
 						break;
 					case 'c':
-						cpuLimit = 1000000ll * std::stoll(optarg);
+						cpuLimit = std::stoll(optarg);
 						break;
 					case 't':
 						timeLimit = std::stoll(optarg);

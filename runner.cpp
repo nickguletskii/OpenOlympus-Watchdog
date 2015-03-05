@@ -310,6 +310,7 @@ namespace openolympus {
 			if (peak_virtual_memory_size > memory_limit) {
 				finish(MEMORY_LIMIT);
 			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
 
 		LOG("Finishing");

@@ -40,7 +40,7 @@
 #include <algorithm>
 #include <fstream>
 #include <map>
-
+#include <getopt.h>
 
 namespace openolympus {
 #define FAIL_CHILD raise(SIGUSR1)

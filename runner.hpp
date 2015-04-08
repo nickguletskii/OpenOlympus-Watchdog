@@ -46,6 +46,7 @@
 #include <linux/seccomp.h>
 #include <sys/prctl.h>
 #include <cstddef>
+#include <semaphore.h>
 
 #define LOG(x)
 #define ERR_LOG(x)
@@ -110,6 +111,7 @@ namespace openolympus {
 		void fork_app(std::string program, std::vector<std::string> args);
 
 	private:
+		bool usedOnce = true; // Flag that ensures that this watchdog will only be used once
 		bool enableSecurity;
 
 		size_t memory_limit;
@@ -128,7 +130,9 @@ namespace openolympus {
 		int64_t cpu_milliseconds_consumed = 0;
 		int64_t time_consumed = 0;
 		size_t peak_virtual_memory_size = 0u;
-		unsigned int unauthorized_syscall;
+
+		std::string semaphoreName;
+		sem_t* securitySemaphore;
 
 		std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
 
@@ -154,6 +158,8 @@ namespace openolympus {
 		void shutdown(int exit_code);
 
 		exit_status status;
+
+		std::string generate_semaphore_id();
 	};
 
 }

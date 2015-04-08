@@ -40,7 +40,10 @@
 #include <algorithm>
 #include <fstream>
 #include <map>
+#include <random>
 #include <getopt.h>
+#include <semaphore.h>
+#include <fcntl.h>
 
 namespace openolympus {
 #define FAIL_CHILD raise(SIGUSR1)
@@ -151,6 +154,11 @@ namespace openolympus {
 	}
 
 	void watchdog::execute_child(std::string program, std::vector<std::string> args) {
+		if((securitySemaphore = sem_open(semaphoreName.c_str(), O_EXCL))==SEM_FAILED){
+			ERR_LOG("Couldn't create security semaphore! " <<
+					strerror(errno));
+			exit(EX_SOFTWARE);
+		}
 
 		if (setsid() < 0) {
 			ERR_LOG("Couldn't setsid! Error: " << strerror(errno));
@@ -180,11 +188,15 @@ namespace openolympus {
 		envp[0] = nullptr;
 
 
-		LOG("Chrooting...");
+		if(!chroot_path.empty() && chroot_path!="/") {
+			LOG("Chrooting...");
 
-		if (chroot(chroot_path.c_str()) != 0) {
-			ERR_LOG("Couldn't chroot! Error: " << strerror(errno));
-			FAIL_CHILD;
+			if (chroot(chroot_path.c_str()) != 0) {
+				ERR_LOG("Couldn't chroot! Error: " << strerror(errno));
+				FAIL_CHILD;
+			}
+
+			LOG("Chrooted.");
 		}
 
 		if (setgid(gid) != 0) {
@@ -195,6 +207,18 @@ namespace openolympus {
 			ERR_LOG("Couldn't change uid! Error: " << strerror(errno));
 			FAIL_CHILD;
 		}
+
+		LOG("Waiting for watcher threads to be ready");
+		if(sem_wait(securitySemaphore) == EINTR) // Wait for the signal polling thread
+			FAIL_CHILD;
+		if(sem_wait(securitySemaphore) == EINTR)  // Wait for the timeout thread
+			FAIL_CHILD;
+		if(sem_wait(securitySemaphore) == EINTR)  // Wait for the CPU time/memory limiting thread
+			FAIL_CHILD;
+		LOG("Watcher threads are ready. Closing the semaphore.");
+		sem_close(securitySemaphore);
+		sem_unlink(semaphoreName.c_str());
+		LOG("Closed semaphore.");
 
 		if (enableSecurity)
 			install_syscall_filter();
@@ -213,6 +237,8 @@ namespace openolympus {
 		clock_getcpuclockid(pid, &clock_id);
 
 		exit_monitor_thread = std::thread([this]() {
+			sem_post(securitySemaphore);
+
 			int status;
 			do {
 				waitpid(pid, &status, WUNTRACED);
@@ -256,6 +282,8 @@ namespace openolympus {
 		exit_monitor_thread.detach();
 
 		timeout_thread = std::thread([this]() {
+			sem_post(securitySemaphore);
+
 			std::unique_lock<std::mutex> lk(running_notifier_mutex);
 			if (!running_notifier.wait_for(lk,
 					std::chrono::milliseconds(time_limit),
@@ -264,6 +292,8 @@ namespace openolympus {
 			}
 		});
 		timeout_thread.detach();
+
+		sem_post(securitySemaphore);
 
 		LOG("Opening procfs for the first time");
 		std::ifstream procfs_stream("/proc/" + std::to_string(pid) + "/stat");
@@ -374,10 +404,47 @@ namespace openolympus {
 	void watchdog::finish(exit_status status) {
 		running = false;
 		this->status = status;
+
+		LOG("Destroying semaphore.");
+		sem_close(securitySemaphore);
+		sem_unlink(semaphoreName.c_str());
+		LOG("Destroyed semaphore.");
+	}
+
+	std::string watchdog::generate_semaphore_id(){
+		std::vector<char> name(16);
+		std::mt19937_64 mersenneTwister;
+		std::seed_seq sseq{
+				(int)(
+						std::chrono::system_clock::now().time_since_epoch().count()
+						% 1000000007
+				),
+				(int)(getpid() % 1000000007)
+		};
+		mersenneTwister.seed(sseq);
+		std::uniform_int_distribution<> distribution(0, 15);
+
+		std::generate(name.begin(), name.end(), [&]{
+			return "0123456789ABCDEF"[distribution(mersenneTwister)];
+		});
+
+		return std::string(name.begin(), name.end());
 	}
 
 	void watchdog::fork_app(std::string program, std::vector<std::string> args) {
 		running = true;
+		if(!usedOnce)
+			throw std::logic_error("A watchdog can only be used once!");
+		usedOnce = false;
+
+		semaphoreName = "/oolw" + generate_semaphore_id();
+
+		if((securitySemaphore = sem_open(semaphoreName.c_str(), O_CREAT, 0664, 0))==SEM_FAILED){
+			ERR_LOG("Couldn't create security semaphore! " <<
+					strerror(errno));
+			exit(EX_SOFTWARE);
+		}
+
 		pid = fork();
 
 		if (pid == 0) {

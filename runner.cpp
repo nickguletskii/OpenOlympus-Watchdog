@@ -323,7 +323,7 @@ namespace openolympus {
 					case 14:
 						procfs_stream >> kernel_cpu_time;
 						break;
-					case 22:
+					case 23:
 						procfs_stream >> virtual_memory_size;
 						break;
 					default:

@@ -354,7 +354,7 @@ void watchdog::enter_watchdog()
 
 		peak_virtual_memory_size = std::max<size_t>(virtual_memory_size, peak_virtual_memory_size);
 
-		if (peak_virtual_memory_size > memory_limit) {
+		if (memory_limit != -1 && peak_virtual_memory_size > memory_limit) {
 			finish(MEMORY_LIMIT);
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));

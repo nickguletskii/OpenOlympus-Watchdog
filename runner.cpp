@@ -278,6 +278,9 @@ void watchdog::enter_watchdog()
 				case SIGSEGV:
 				case SIGBUS:
 				case SIGFPE:
+				case SIGABRT:
+				case SIGILL:
+				case SIGQUIT:
 					finish(RUNTIME_ERROR);
 					break;
 				case SIGSYS:
@@ -287,7 +290,7 @@ void watchdog::enter_watchdog()
 					finish(INTERNAL_ERROR);
 					break;
 				default:
-					shutdown(EXIT_FAILURE);
+					finish(INTERNAL_ERROR);
 					break;
 				}
 
